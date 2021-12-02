@@ -70,61 +70,61 @@ After the successfull detection of the R peaks, the heart rate of an individual 
 
 #### Heart Rate: 94.5036 BPM
 
-<img src="./Images/100.png" width="500">
+<img src="./Images/100.png" width="1000">
 
 ### Record No. 101
 
 #### Heart Rate: 66.6667 BPM
 
-<img src="./Images/101.png" width="500">
+<img src="./Images/101.png" width="1000">
 
 ### Record No. 102
 
 #### Heart Rate: 72.3948 BPM
 
-<img src="./Images/102.png" width="500">
+<img src="./Images/102.png" width="1000">
 
 ### Record No. 103
 
 #### Heart Rate: 72.1202 BPM
 
-<img src="./Images/103.png" width="500">
+<img src="./Images/103.png" width="1000">
 
 ### Record No. 104
 
 #### Heart Rate: 74.6700 BPM
 
-<img src="./Images/104.png" width="500">
+<img src="./Images/104.png" width="1000">
 
 ### Record No. 105
 
 #### Heart Rate: 83.1225 BPM
 
-<img src="./Images/105.png" width="500">
+<img src="./Images/105.png" width="1000">
 
 ### Record No. 106
 
 #### Heart Rate: 60.6363 BPM
 
-<img src="./Images/106.png" width="500">
+<img src="./Images/106.png" width="1000">
 
 ### Record No. 107
 
 #### Heart Rate: 78.4795 BPM
 
-<img src="./Images/107.png" width="500">
+<img src="./Images/107.png" width="1000">
 
 ### Record No. 108
 
 #### Heart Rate: 130.9090 BPM
 
-<img src="./Images/108.png" width="500">
+<img src="./Images/108.png" width="1000">
 
 ### Record No. 109
 
 #### Heart Rate: 99.9383 BPM
 
-<img src="./Images/109.png" width="500">
+<img src="./Images/109.png" width="1000">
 
 
 ## Instructions to Run :runner:
