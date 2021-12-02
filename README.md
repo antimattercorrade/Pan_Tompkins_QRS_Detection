@@ -1,67 +1,138 @@
 # Pan Tompkins QRS Detection ⭐
 
-One of the fundamental challenges in the field of image processing and computer vision is image denoising, where the underlying goal is to estimate the original image by suppressing noise from a noise-contaminated version of the image. Image noise may be caused by different intrinsic (i.e., sensor) and extrinsic (i.e.environment) conditions which are often not possible to avoid in practical situations. Therefore, image denoising plays an important role in a wide range of applications such as image restoration, visual tracking, image registration, image segmentation, and image classification, where obtaining the original image content is crucial for strong performance. While many algorithms have been proposed for the purpose of image denoising, the problem of image noise suppression remains an open challenge, especially in situations where the images are acquired under poor conditions where the noise level is very high. We will be exploring non-local means algorithm for image denoising in this repository.
+A dependable QRS recognition algorithm has numerous applications. A popular technique is the computer interpretation of the 12-lead ECG. Arrhythmia monitors are now widely used in coronary care units. Holter tape recording, which is widely used, necessitates a Holter scanning device that includes a QRS detector to analyse the tapes much faster than in real-time. Arrhythmia monitors for ambulatory patients that analyse the ECG in real time are currently in development. When an arrhythmia occurs, such a monitor can be programmed to immediately store an interval of the abnormal ECG for subsequent transmission to a central station where a physician can interpret it. Such a device necessitates highly accurate QRS recognition. False detection results in unnecessary data transmission to the central station or requires an extensive memory to store any ECG segments that are captured unnecessarily. As a result, an accurate QRS detector is an essential component of many ECG instruments.
 
+## Pan Tompkins Algorithm 🔥
 
-## Non-Local Means 🔥
+The Pan-Tompkins Algorithm is used to detect R waves from the QRS complex present in the ECG signals to determine the Heart Rate of an individual. The algorithm works by analysing the slope, amplitude and width of the QRS complexes present in the filtered ECG signal. The ECG signal is filtered so as to reduce noise and decrease detection thresholds, thereby increasing the sensitivity towards detection of the QRS complex. 
 
-The general idea of the Non-Local Means (NLM) algorithm is to estimate the actual pixel value in the denoised image using a weighted mean of pixel neighborhoods having some similarity in the noisy image. Ideally pixel similarity should be searched in the complete image but for high resolution images, this procedure can take quite some time. So, pixel similarity is searched only in some neighborhood of each pixel, defined by the variable `big_window`. Also, to increase the performance while calculating the similarity of each pixel, instead of considering only one pixel, a small area of pixels is chosen around it, given by the `small_window` parameter. 
+The algorithm can be divided into various phases, the first phase consists of applying the filtered on the input ECG signal, followed by peak detection in the filtered signal. The peak detection again works in three phases: Learning Phase 1, Learning Phase 2 and Detection. Learning Phase 1 is required to initialize the signal and noise thresholds followed by Learning Phase 2 in which the RR intervals and the RR limit values are initialized. The detection phase works by adjusting the thresholds appropriately and recognizing the QRS complexes. A dual threshold is used to increase the detection sensitivity along with the improvement in the signal to noise ratio by the bandpass filter.
 
 ### Implementation Details
 
-Gaussian and salt & pepper noises are added to the input image using the standard procedures and the noisy image is passed as a parameter to the NLMeans’ `solve()` function. Along with the noisy image, the `small_window`, `big_window` and `h` (filtering parameter) are also given. A result image is initialised as a numpy array of zeros having the same dimensions as the input noisy image. To calculate the similarity values by considering a `big_window` * `big_window` neighborhood around each pixel, the noisy image is padded along each of the four boundaries. The padded width is `big_window/2` since the neighborhood is created by considering each pixel in consideration as the center. The mode of the padding is `reflect` to account for better similarity values for the boundary pixels.
-  
-Since, we want a `small_window` * `small_window` patch for similarity calculation, they are preprocessed by traversing the padded image and storing a 2D array of size `small_window` * `small_window` for each pixel in the input noisy image.  Now, each pixel of the input noisy image is traversed and a `big_window` * `big_window` neighborhood around that pixel is obtained by indexing the previously preprocessed array. So, in each iteration of the loops we get, a 2D `small_window` * `small_window` patch for current pixel, a 4D `big_window` * `big_window` neighborhood around the current pixel having each entry as a 2D `small_window` * `small_window` patch. 
+## Filtering the ECG signal 
 
-Now, we have all the required elements to calculate the weighted mean for the current pixel. Each pixel is traversed in the calculated 4D `big_window` * `big_window` neighborhood. For each such pixel we get a 2D `small_window` * `small_window` patch and the squared norm of this 2D window and current pixel’s 2D window is taken. This norm is multiplied by `-1/(size of neighborhood window)` and its exponential is taken. This value is used to calculate the numerator of the expected NLMeans value for each pixel (as defined in the paper `A non-local algorithm for image denoising`). The denominator of this fraction is calculated by the summation of such exponential terms.
+*  **Bandpass Filter:** Bandpass filter is used to attenuate the noise in the 
+    input signal. To acheive a passband of 5-15 Hz, the input signal is first passed 
+    through a low pass filter having a cutoff frequency of 11 Hz and then
+    through a high pass filter with a cutoff frequency of 5 Hz, thus
+    achieving the required thresholds. <br>
 
-### Parameters
+    The low pass filter has the recursive equation: <br>
+      > y(nT) = 2y(nT - T) - y(nT - 2T) + x(nT) - 2x(nT - 6T) + x(nT - 12T)
 
-**Sigma_h:** The `sigma_h` parameter is the filtering parameter which determines the impact of each exponential value in the calculations, i.e. the impact of the similarities as a function of distance. It is used to control the weight of the patch difference values. Optimising `sigma_h` value can lead to significant improvements in the quality of  the denoised image produced.
+    The high pass filter has the recursive equation: <br>
+      > y(nT) = 32x(nT - 16T) - y(nT - T) - x(nT) + x(nT - 32T) 
 
-**Small_window:** The `small_window` parameter is used to create a small patch around each pixel to help find the similarity score between the pixels.  To calculate the weighted value for a pixel, we search for similar pixels, so as to find the expectation of the real value of the pixel without noise. This can be done using the pixel values at each pixel but to increase the accuracy of the expected value, a small patch is created around each pixel and its value if taken to be the weighted average inside this small patch. This is so that a better similarity score can be calculated and hence the resulting image.
+* **Derivative Filter:** The derivative of the input signal is taken to obtain 
+    the information of the slope of the signal. Thus, the rate of change
+    of input is obtain in this step of the algorithm. <br>
 
-**Big_window:** The `big_window` parameter is used to create a neighborhood of pixels around each pixel to search for similar values. Ideally, to find the expected value of each pixel in the denoised image, the weighted average for all pixels in the image can be calculated. But this approach is not suitable for larger sized images and suffers from large 
-computation times. Thus, to optimise the calculation a neighborhood is created within which the weighted average of similarity values is taken to calculate the expected value.
+    The derivative filter has the recursive equation: <br>
+    > y(nT) = [-x(nT - 2T) - 2x(nT - T) + 2x(nT + T) + x(nT + 2T)]/(8T)
+
+* **Squaring:** The squaring process is used to intensify the slope of the
+    frequency response curve obtained in the derivative step. This
+    step helps in restricting false positives which may be caused
+    by T waves in the input signal. <br>
+
+    The squaring filter has the recursive equation: <br>
+    > y(nT) = [x(nT)]^2 
+
+* **Moving Window Integration:** The moving window integration process is done 
+    to obtain information about both the slope and width of the QRS complex.
+    A window size of 0.15*(sample frequency) is used for more
+    accurate results. <br>
+
+    The moving window integration has the recursive equation: <br>
+    > y(nT) = [y(nT - (N-1)T) + x(nT - (N-2)T) + ... + x(nT)]/N
+
+    where N is the number of samples in the width of integration
+    window.
+
+## Peak Detection 
+
+* **Fiducial Mark:** An approximate location of the QRS complex can be obtained in the initial phase of detection by sensing the rising edge of the integration waveform. Since, a peak is determined by the change in slope of the curve, the differentiated signal is used to determine the fiducial marks. 
+
+* **Adjusting Thresholds:** Since the signal to noise ratio is improved by the bandpass filter, two sets thresholds are maintained to account for low threshold values. The higher thresholds of each set are used to detect peaks in the first analysis and the lower thresholds in the searchback process. The thresholds are adjusted accordingly to account for the detected signal peaks and noise values.  
+
+* **Adjusting RR Interval and Limits:** To keep track of the time between two successive R peaks, two RR intervals are maintained. The first RR interval keeps track of the eight most recent beats while the second RR interval keeps track of the eight most recent beats having RR intervals that fall within the rate limits. Two averages pertaining to these RR intervals are calculated. These averages are then used to update the rate limits for the RR intervals. If a QRS compelx is not found within the calculated limits a searchback process is initiated to find the maximal peak value within the two calculated thresholds and this peak is taken to be a QRS candidate.
+
+* **T Wave Identification:** If the calculated RR interval is less than 360 ms, which in this case is the sample frequency of the input ECG signal, then the maximal slope of this waveform is calculated. This is done to ensure that the interval in consideration is actually a QRS complex or a T wave. If the calculated maximal slope of the considered interval is less than half of the slope of the last QRS complex detected, then the current interval is considered to be a T wave. 
+
+After the successfull detection of the R peaks, the heart rate of an individual can be calculated by considering the time difference between successive R peaks. The heart rate can be calculated as: <br> 
+> Heart Rate = 60/RR Interval (in seconds)
+
 
 ## Results :bar_chart:
 
-##### Metrics (MSE and PSNR) obtained for Noisy Image, SKImage, NL Means and Gaussian filtering for all the 10 images
+### Record No. 100
 
-Note: Better NLM values can be obtained using different salt_and_pepper_h value and gaussian_h_value.
+#### Heart Rate: 94.5036 BPM
 
-**Mean Squared Error (MSE)**
+<img src="./Images/100.png" width="500">
 
-SNP Noise             |  Gaussian Noise 
-:-------------------------:|:-------------------------:
-<img src="./Images/MSE_SnP.png" width="500"> | <img src="./Images/MSE_Gaussian.png" width="500">
+### Record No. 101
 
-**Peak Signal to Noise Ratio (PSNR)**
+#### Heart Rate: 66.6667 BPM
 
-SNP Noise              |  Gaussian Noise
-:-------------------------:|:-------------------------:
-<img src="./Images/PSNR_SnP.png" width="500"> | <img src="./Images/PSNR_Gaussian.png" width="500">
+<img src="./Images/101.png" width="500">
 
+### Record No. 102
 
-## Observations :notebook:
+#### Heart Rate: 72.3948 BPM
 
-The Non Local Means algorithm works better than the Gaussian Filtering algorithm for all of the images for both the salt and pepper noise and gaussian noise. For the taken values of `salt_and_paper_h` and `gaussian_h`, the Non Local Means algorithm produces images with lower MSE and higher PSNR than the Gaussian Filtering algorithm. The only exceptions being image 2 and 10 in which the MSE and PSNR of the Gaussian Filtering are quantitatively better but the metrics and visual quality of the image produced by Non Local Means and Gaussian Filtering are comparable. 
+<img src="./Images/102.png" width="500">
 
-The stated deviation for both the images may be because for the values of `h` parameter taken the Non Local Means algorithm cannot find much similarity in a neighborhood defined by `big_window`. This can be rectified by tuning the parameters for the specific image to produce better results or performing a full search of the image for similarity values instead of just a neighborhood defined by `big_window`.
+### Record No. 103
+
+#### Heart Rate: 72.1202 BPM
+
+<img src="./Images/103.png" width="500">
+
+### Record No. 104
+
+#### Heart Rate: 74.6700 BPM
+
+<img src="./Images/104.png" width="500">
+
+### Record No. 105
+
+#### Heart Rate: 83.1225 BPM
+
+<img src="./Images/105.png" width="500">
+
+### Record No. 106
+
+#### Heart Rate: 60.6363 BPM
+
+<img src="./Images/106.png" width="500">
+
+### Record No. 107
+
+#### Heart Rate: 78.4795 BPM
+
+<img src="./Images/107.png" width="500">
+
+### Record No. 108
+
+#### Heart Rate: 130.9090 BPM
+
+<img src="./Images/108.png" width="500">
+
+### Record No. 109
+
+#### Heart Rate: 99.9383 BPM
+
+<img src="./Images/109.png" width="500">
+
 
 ## Instructions to Run :runner:
 
-* The dataset is being downloaded from the given hashed link. However if at a later point of time, the dataset is not available in the input file, kindly use the image dataset present in the repository in place of the downloaded data. 
+* The dataset is being downloaded from the given hashed link. 
 
-* To run, open the colab file and select the image using the slider given. Then run the corresponding cells to get the results
+* To run, open the colab file and select the image using the slider given. Then run the corresponding cells to get the results.
 
 ## References and Credits 💳
 
-[1] Buades, A., Coll, B., & Morel, J. M. (2005). A non-local algorithm for image denoising. 2005 IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR'05), 2, 60-65. doi: 10.1109/CVPR.2005.38.
-
-[2] Ingraham, K. (2017, February 4). Salt & Pepper Noise and Median Filters, Part II. blog.kyleingraham.com. Retrieved August 18, 2021, from https://blog.kyleingraham.com/2017/02/04/salt-pepper-noise-and-median-filters-part-ii-the-code/
-
-[3] Mahmoudi, M., & Sapiro, G. (2005, December 12). Fast Image and Video Denoising via Nonlocal Means of Similar Neighborhoods. IEEE Signal Processing Letters, 12(12), 839-842. doi:10.1109/lsp.2005.859509
-
-[4] Palou, G. (2015, July 7). An approach to Non-Local-Means denoising. http://dsvision.github.io/. http://dsvision.github.io/an-approach-to-non-local-means-denoising.html
-
+[1] Pan, J. and Tompkins, W., 1985. A Real-Time QRS Detection Algorithm. IEEE Transactions on Biomedical Engineering, BME-32(3), pp.230-236.
